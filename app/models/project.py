@@ -1,32 +1,44 @@
-from datetime import date, datetime
-
-from sqlalchemy import Date, DateTime, ForeignKey, String, Table, Column, Text, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.core.database import Base
-
-
-project_tags = Table(
-    "project_tags",
-    Base.metadata,
-    Column("project_id", ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True),
-    Column("tag_id", ForeignKey("tech_tags.id", ondelete="CASCADE"), primary_key=True),
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Date,
+    DateTime
 )
+from sqlalchemy.orm import declarative_base
+from datetime import datetime
 
+Base = declarative_base()
 
 class Project(Base):
     __tablename__ = "projects"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255), index=True)
-    description: Mapped[str | None] = mapped_column(Text())
-    status: Mapped[str] = mapped_column(String(40), default="planned")
-    start_date: Mapped[date | None] = mapped_column(Date)
-    end_date: Mapped[date | None] = mapped_column(Date)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    id = Column(Integer, primary_key=True, index=True)
 
-    owner: Mapped["User"] = relationship(back_populates="projects")
-    tags: Mapped[list["TechTag"]] = relationship(
-        secondary=project_tags, back_populates="projects"
-    )
+    project_code = Column(String(50), nullable=False)
+    name = Column(String(255), nullable=False)
+    customer_name = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+
+    project_type = Column(String(50), nullable=False)
+    dev_process_phase = Column(String(50), nullable=False)
+
+    status = Column(String(50), nullable=False)
+    priority = Column(Integer, nullable=False, default=0)
+
+    leader_id = Column(Integer, nullable=True)
+
+  
+    tech_stacks = Column(Text, nullable=True)   # JSON s
+    tags = Column(Text, nullable=True)
+    urls = Column(Text, nullable=True)
+    members = Column(Text, nullable=True)
+
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+
+    deleted_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
