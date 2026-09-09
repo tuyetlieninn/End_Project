@@ -8,7 +8,7 @@ class TechTag(Base):
     __tablename__ = "tech_tags"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 
     projects: Mapped[list["Project"]] = relationship(
         secondary="project_tags", back_populates="tags"
