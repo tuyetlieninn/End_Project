@@ -1,26 +1,28 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.security import create_access_token
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import LoginRequest, RegisterRequest, Token, UserRead
+from app.schemas.user import LoginRequest, RegisterRequest, Token, UserInfo, UserRead
 from app.services import user_service
-from fastapi import APIRouter, Depends, status
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)  # thêm status_code
+@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)) -> Token:
-    token = await user_service.register(db, payload)
-    return Token(idToken=token)
+    user = await user_service.register(db, payload)  # giờ nhận về User, không phải token string
+    token = create_access_token(user.email, user.role)  # tạo token ở đây
+    return Token(idToken=token, user=UserInfo(email=user.email, role=user.role))
 
 
 @router.post("/login", response_model=Token)
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Token:
-    token = await user_service.login(db, payload)  # thêm await
-    return Token(idToken=token)
+    user = await user_service.login(db, payload)
+    token = create_access_token(user.email, user.role)
+    return Token(idToken=token, user=UserInfo(email=user.email, role=user.role))
 
 
 @router.get("/me", response_model=UserRead)
