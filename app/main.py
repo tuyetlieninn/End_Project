@@ -2,9 +2,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.routers import auth
+from app.api.routers import auth, projects
 from app.db.database import Base, engine
-from app.models import user  # noqa: F401
+from app.models import project, user  # noqa: F401
 
 
 @asynccontextmanager
@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="End_Project API", lifespan=lifespan)
 
 app.include_router(auth.router)
+app.include_router(projects.router)
 
 
 @app.get("/health")
