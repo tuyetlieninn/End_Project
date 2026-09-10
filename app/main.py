@@ -2,9 +2,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+<<<<<<< HEAD
 from app.api.routers import auth, projects
 from app.db.database import Base, engine
 from app.models import project, user  # noqa: F401
+=======
+from app.api.routers import auth, projects, tags
+from app.db.database import Base, engine
+from app.models import project, tech_tag, user  # noqa: F401
+>>>>>>> 49ffcc3b96e5f92295b46119e01730961230be99
 
 
 @asynccontextmanager
@@ -21,6 +27,10 @@ app = FastAPI(title="End_Project API", lifespan=lifespan)
 
 app.include_router(auth.router)
 app.include_router(projects.router)
+<<<<<<< HEAD
+=======
+app.include_router(tags.router)
+>>>>>>> 49ffcc3b96e5f92295b46119e01730961230be99
 
 
 @app.get("/health")
