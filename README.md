@@ -1,8 +1,8 @@
 # My Project Backend
 
-Backend quan ly du an noi bo, xay dung voi FastAPI, SQLAlchemy async va Alembic.
+An internal project management backend built with FastAPI, asynchronous SQLAlchemy, and Alembic.
 
-## Chay nhanh
+## Quick Start
 
 ```bash
 python -m venv .venv
@@ -11,17 +11,17 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Mo Swagger tai `http://127.0.0.1:8000/docs`.
+Open the Swagger UI at `http://127.0.0.1:8000/docs`.
 
-## API chinh
+## Main API Endpoints
 
-- `POST /api/v1/auth/register`: tao tai khoan
-- `POST /api/v1/auth/login`: dang nhap OAuth2 form, tra JWT
-- `GET/POST /api/v1/projects`: xem va tao project cua user hien tai
-- `GET/POST /api/v1/tags`: xem va tao tech tag
-- `GET /health`: kiem tra service
+- `POST /auth/register`: Register a new account.
+- `POST /auth/login`: Log in and receive a JWT.
+- `GET/POST /projects`: List and create projects for the current user.
+- `GET/POST /tech-tags`: List and create technology tags.
+- `GET /health`: Check service availability.
 
-SQLite duoc dung mac dinh de development. Doi `DATABASE_URL` trong `.env` khi ket noi PostgreSQL.
+SQLite is used by default for development. Configure the database settings in `.env` when connecting to PostgreSQL.
 
 ## Migration
 
