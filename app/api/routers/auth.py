@@ -6,13 +6,14 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import LoginRequest, RegisterRequest, Token, UserRead
 from app.services import user_service
+from fastapi import APIRouter, Depends, status
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=Token)
+@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)  # thêm status_code
 async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)) -> Token:
-    token = await user_service.register(db, payload)  # thêm await
+    token = await user_service.register(db, payload)
     return Token(idToken=token)
 
 
