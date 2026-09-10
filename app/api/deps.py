@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
+from jwt.exceptions import InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_token
@@ -21,7 +21,7 @@ async def get_current_user(
         email = payload.get("email")
         if email is None:
             raise HTTPException(status_code=401, detail="Invalid token payload")
-    except JWTError:
+    except InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     user = await get_user_by_email(db, email)  # có await vì hàm này giờ là async
