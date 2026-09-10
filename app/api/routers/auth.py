@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
@@ -11,18 +11,17 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=Token)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> Token:
-    token = user_service.register(db, payload)
+async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)) -> Token:
+    token = await user_service.register(db, payload)  # thêm await
     return Token(idToken=token)
 
 
 @router.post("/login", response_model=Token)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> Token:
-    token = user_service.login(db, payload)
+async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Token:
+    token = await user_service.login(db, payload)  # thêm await
     return Token(idToken=token)
 
 
 @router.get("/me", response_model=UserRead)
-def read_me(current_user: User = Depends(get_current_user)) -> UserRead:
-    # Route phụ để tự test middleware: gọi kèm token sẽ trả về thông tin user hiện tại
+async def read_me(current_user: User = Depends(get_current_user)) -> UserRead:
     return current_user

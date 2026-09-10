@@ -1,13 +1,23 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api.routers import auth
 from app.db.database import Base, engine
-from app.models import user  # noqa: F401  (import để SQLAlchemy biết bảng users tồn tại)
+from app.models import user  # noqa: F401
 
-# Tự tạo bảng trong SQLite nếu chưa có (dùng tạm, sau này Người A sẽ thay bằng Alembic migration)
-Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="End_Project API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Chạy lúc server khởi động — engine.begin() mở 1 connection async
+    # conn.run_sync(...) cho phép chạy hàm sync (create_all) bên trong context async
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # (nếu cần dọn dẹp lúc tắt server thì viết sau chữ yield, hiện chưa cần)
+
+
+app = FastAPI(title="End_Project API", lifespan=lifespan)
 
 app.include_router(auth.router)
 

@@ -1,15 +1,13 @@
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.database import engine
 
-# SessionLocal là factory tạo ra 1 phiên làm việc (session) với DB mỗi khi cần
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# async_sessionmaker thay cho sessionmaker — tạo ra AsyncSession thay vì Session thường
+SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
-def get_db():
-    # Dependency dùng trong FastAPI: mở session, dùng xong tự đóng lại (kể cả khi lỗi)
-    db = SessionLocal()
-    try:
+async def get_db():
+    # "async def" + "async with" thay cho try/finally thường
+    # Khi FastAPI dùng xong sẽ tự động await để đóng session
+    async with SessionLocal() as db:
         yield db
-    finally:
-        db.close()
