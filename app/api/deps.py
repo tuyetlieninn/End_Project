@@ -1,34 +1,37 @@
-from typing import Annotated
-
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import select
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
-from app.core.database import get_db
-from app.core.security import decode_access_token
+from app.core.security import decode_token
+from app.db.session import get_db
 from app.models.user import User
+from app.services.user_service import get_user_by_email
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_v1_prefix}/auth/login")
-DbSession = Annotated[AsyncSession, Depends(get_db)]
+bearer_scheme = HTTPBearer()
 
 
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)], db: DbSession
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
 ) -> User:
-    user_id = decode_access_token(token)
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    try:
+        payload = decode_token(credentials.credentials)
+        email = payload.get("email")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+    except JWTError as exc:
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
-    user = await db.get(User, int(user_id))
-    if not user or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+    user = await get_user_by_email(db, email)
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
     return user
 
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
+async def get_current_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    return current_user

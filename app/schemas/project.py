@@ -2,16 +2,13 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.tech_tag import TechTagRead
-
-
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = None
     status: str = Field(default="planned", max_length=40)
     start_date: date | None = None
     end_date: date | None = None
-    tag_ids: list[int] = Field(default_factory=list)
+    technologies: list[str] = Field(default_factory=list)
 
 
 class ProjectRead(BaseModel):
@@ -25,4 +22,4 @@ class ProjectRead(BaseModel):
     end_date: date | None
     owner_id: int
     created_at: datetime
-    tags: list[TechTagRead] = []
+    technologies: list[str] = Field(default_factory=list)
