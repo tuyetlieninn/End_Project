@@ -8,23 +8,18 @@ from app.models.user import User
 from app.schemas.user import LoginRequest, RegisterRequest, Token, UserInfo, UserRead
 from app.services import user_service
 
-
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register(
-    payload: RegisterRequest, db: AsyncSession = Depends(get_db)
-) -> Token:
-    user = await user_service.register(db, payload)
-    token = create_access_token(user.email, user.role)
+async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)) -> Token:
+    user = await user_service.register(db, payload)  # giờ nhận về User, không phải token string
+    token = create_access_token(user.email, user.role)  # tạo token ở đây
     return Token(idToken=token, user=UserInfo(email=user.email, role=user.role))
 
 
 @router.post("/login", response_model=Token)
-async def login(
-    payload: LoginRequest, db: AsyncSession = Depends(get_db)
-) -> Token:
+async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Token:
     user = await user_service.login(db, payload)
     token = create_access_token(user.email, user.role)
     return Token(idToken=token, user=UserInfo(email=user.email, role=user.role))

@@ -1,38 +1,33 @@
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from jose import JWTError, jwt
+from jose import jwt
 
 from app.core.config import get_settings
 
 
 def hash_password(plain: str) -> str:
-    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    # Chuyển: chuỗi -> bytes -> hash bằng bcrypt -> chuyển lại thành chuỗi
+    hashed = bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt())
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
+    # So sánh mật khẩu nhập vào với hash đã lưu trong DB
     return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 def create_access_token(email: str, role: str) -> str:
     settings = get_settings()
-    expires_at = datetime.now(timezone.utc) + timedelta(
+    expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    return jwt.encode(
-        {"sub": email, "email": email, "role": role, "exp": expires_at},
-        settings.secret_key,
-        algorithm=settings.jwt_algorithm,
-    )
+    # payload chứa email + role để FE decode được { email, role } như API仕様 yêu cầu
+    payload = {"sub": email, "email": email, "role": role, "exp": expire}
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
 
 
 def decode_token(token: str) -> dict:
     settings = get_settings()
-    try:
-        return jwt.decode(
-            token,
-            settings.secret_key,
-            algorithms=[settings.jwt_algorithm],
-        )
-    except JWTError:
-        raise
+    # Nếu token sai/hết hạn, jwt.decode sẽ tự raise lỗi (InvalidTokenError)
+    return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])

@@ -8,7 +8,8 @@ from app.schemas.user import LoginRequest, RegisterRequest
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
-    result = await db.execute(select(User).where(User.email == email))
+    stmt = select(User).where(User.email == email)
+    result = await db.execute(stmt)
     return result.scalars().first()
 
 
@@ -24,11 +25,11 @@ async def register(db: AsyncSession, payload: RegisterRequest) -> User:
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    return user
+    return user  # trả về User, không trả token nữa
 
 
 async def login(db: AsyncSession, payload: LoginRequest) -> User:
     user = await get_user_by_email(db, payload.email)
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
-    return user
+    return user  # trả về User, không trả token nữa

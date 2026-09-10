@@ -8,19 +8,22 @@ from app.models import project, tech_tag, user  # noqa: F401
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
+async def lifespan(app: FastAPI):
+    # Chạy lúc server khởi động — engine.begin() mở 1 connection async
+    # conn.run_sync(...) cho phép chạy hàm sync (create_all) bên trong context async
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     yield
-    await engine.dispose()
+    # (nếu cần dọn dẹp lúc tắt server thì viết sau chữ yield, hiện chưa cần)
 
 
 app = FastAPI(title="End_Project API", lifespan=lifespan)
+
 app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(tags.router)
 
 
-@app.get("/health", tags=["health"])
-async def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+@app.get("/health")
+def health():
+    return {"status": "ok", "db": "sqlite"}
