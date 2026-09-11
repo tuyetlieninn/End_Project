@@ -4,10 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # Đọc các giá trị này từ file .env (tạo ở bước sau)
+    database_url: str = "sqlite+aiosqlite:///./end_project.db"
     secret_key: str
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 24  # 1 ngày
+    access_token_expire_minutes: int = 60 * 24
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -18,5 +18,7 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    # lru_cache giúp chỉ đọc file .env 1 lần duy nhất, các lần gọi sau dùng lại kết quả cũ
     return Settings()
+
+
+settings = get_settings()

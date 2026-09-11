@@ -17,14 +17,14 @@ async def get_current_user(
 ) -> User:
     token = credentials.credentials
     try:
-        payload = decode_token(token)  # decode_token không đụng DB nên không cần await
+        payload = decode_token(token)  
         email = payload.get("email")
         if email is None:
             raise HTTPException(status_code=401, detail="Invalid token payload")
     except InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    user = await get_user_by_email(db, email)  # có await vì hàm này giờ là async
+    user = await get_user_by_email(db, email)  
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
     return user
