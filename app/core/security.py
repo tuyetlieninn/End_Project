@@ -8,6 +8,6 @@ def create_access_token(data: dict, expires_minutes: int = 60):
     to_encode.update({"exp": expire})
     return jwt.encode(
         to_encode,
-        settings.jwt_secret,
+        settings.JWT_SECRET,
         algorithm=settings.jwt_algorithm
     )

@@ -1,61 +1,99 @@
 from datetime import date, datetime
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from enum import Enum
+
+
+class ProjectType(str, Enum):
+    offshore = "offshore"
+    ses = "ses"
+    lab = "lab"
+    new_dev = "new_dev"
+    maintenance = "maintenance"
+
+
+class DevProcessPhase(str, Enum):
+    requirements = "requirements"
+    design = "design"
+    implementation = "implementation"
+    testing = "testing"
+    release = "release"
+    maintenance_ops = "maintenance_ops"
+
 
 class ProjectBase(BaseModel):
-    project_code: str = Field(..., max_length=50)
-    name: str = Field(..., max_length=255)
-    customer_name: Optional[str] = Field(None, max_length=255)
+    customer_name: str
+    project_name: str
     description: Optional[str] = None
-
-    project_type: str = Field(..., max_length=50)
-    dev_process_phase: str = Field(..., max_length=50)
-
-    status: str = Field(..., max_length=50)
-    priority: int = 0
-
-    leader_id: Optional[int] = None
-
-    # CSV fields → convert to list in schema
-    tech_stacks: Optional[List[str]] = None
-    tags: Optional[List[str]] = None
-    urls: Optional[List[str]] = None
-    members: Optional[List[str]] = None
 
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    is_ongoing: bool = False
+
+    team_size: int
+    total_man_month: int
+
+    source_note: Optional[str] = None
+    industry: Optional[str] = None
+    outcome_note: Optional[str] = None
+    team_composition_note: Optional[str] = None
+
+    technologies: List[str] = []
+    project_types: List[ProjectType] = []
+    dev_process_phases: List[DevProcessPhase] = []
 
 
 class ProjectCreate(ProjectBase):
-    pass
+    status: str = "active"
+    priority: int = 0
+
 
 class ProjectUpdate(BaseModel):
-    project_code: Optional[str] = None
-    name: Optional[str] = None
     customer_name: Optional[str] = None
+    project_name: Optional[str] = None
     description: Optional[str] = None
 
-    project_type: Optional[str] = None
-    dev_process_phase: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    is_ongoing: Optional[bool] = None
+
+    team_size: Optional[int] = None
+    total_man_month: Optional[int] = None
+
+    source_note: Optional[str] = None
+    industry: Optional[str] = None
+    outcome_note: Optional[str] = None
+    team_composition_note: Optional[str] = None
+
+    technologies: Optional[List[str]] = None
+    project_types: Optional[List[ProjectType]] = None
+    dev_process_phases: Optional[List[DevProcessPhase]] = None
 
     status: Optional[str] = None
     priority: Optional[int] = None
 
-    leader_id: Optional[int] = None
-
-    tech_stacks: Optional[List[str]] = None
-    tags: Optional[List[str]] = None
-    urls: Optional[List[str]] = None
-    members: Optional[List[str]] = None
-
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
 
 class ProjectRead(ProjectBase):
     id: int
-    created_at: datetime
-    updated_at: datetime
-    deleted_at: Optional[datetime] = None
+    created_by: int
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+    deleted_at: Optional[datetime]
 
-    class Config:
-        orm_mode = True
+    status: str
+    priority: int
+
+    leader_id: Optional[int] = None
+    tech_stacks: Optional[str] = None
+    tags: Optional[str] = None
+    urls: Optional[str] = None
+    members: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ProjectListResponse(BaseModel):
+    page: int
+    page_size: int
+    total: int
+    items: List[ProjectRead]

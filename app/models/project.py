@@ -1,44 +1,50 @@
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    Text,
-    Date,
-    DateTime
-)
-from sqlalchemy.orm import declarative_base
-from datetime import datetime
-
-Base = declarative_base()
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy.sql import func
+from app.core.database import Base
 
 class Project(Base):
     __tablename__ = "projects"
 
+    # ID
     id = Column(Integer, primary_key=True, index=True)
 
-    project_code = Column(String(50), nullable=False)
-    name = Column(String(255), nullable=False)
-    customer_name = Column(String(255), nullable=True)
-    description = Column(Text, nullable=True)
+    # --- SPEC FIELDS (INTERN2026-61) ---
+    customer_name = Column(String(255), nullable=False)
+    project_name = Column(String(255), nullable=False)
+    description = Column(String, nullable=True)
 
-    project_type = Column(String(50), nullable=False)
-    dev_process_phase = Column(String(50), nullable=False)
+    start_date = Column(String(10), nullable=False)      # YYYY-MM-DD
+    end_date = Column(String(10), nullable=False)
 
+    is_ongoing = Column(Boolean, nullable=False, default=False)
+    team_size = Column(Integer, nullable=False)          # >= 1
+    total_man_month = Column(Integer, nullable=False)    # >= 0
+
+    source_note = Column(String, nullable=True)
+    industry = Column(String, nullable=True)
+    outcome_note = Column(String, nullable=True)
+    team_composition_note = Column(String, nullable=True)
+
+    # CSV fields (task 61)
+    technologies_csv = Column(String, nullable=True)
+    project_types_csv = Column(String, nullable=True)
+    dev_process_phases_csv = Column(String, nullable=True)
+
+    created_by = Column(Integer, nullable=False)
+
+    # --- TIMESTAMPS ---
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+    # --- EXTRA FIELDS FROM TASK 63 (GIỮ NGUYÊN LOGIC) ---
+    # Bạn vẫn cần các field này để CRUD cũ chạy đúng
     status = Column(String(50), nullable=False)
-    priority = Column(Integer, nullable=False, default=0)
+    priority = Column(Integer, nullable=False)
 
     leader_id = Column(Integer, nullable=True)
+    tech_stacks = Column(String, nullable=True)
+    tags = Column(String, nullable=True)
+    urls = Column(String, nullable=True)
+    members = Column(String, nullable=True)
 
-  
-    tech_stacks = Column(Text, nullable=True)   # JSON s
-    tags = Column(Text, nullable=True)
-    urls = Column(Text, nullable=True)
-    members = Column(Text, nullable=True)
-
-    start_date = Column(Date, nullable=True)
-    end_date = Column(Date, nullable=True)
-
-    deleted_at = Column(DateTime, nullable=True)
-
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
