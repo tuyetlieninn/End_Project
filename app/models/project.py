@@ -5,7 +5,6 @@ from app.core.database import Base
 class Project(Base):
     __tablename__ = "projects"
 
-    # ID
     id = Column(Integer, primary_key=True, index=True)
 
     # --- SPEC FIELDS (INTERN2026-61) ---
@@ -37,8 +36,7 @@ class Project(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
-    # --- EXTRA FIELDS FROM TASK 63 (GIỮ NGUYÊN LOGIC) ---
-    # Bạn vẫn cần các field này để CRUD cũ chạy đúng
+    # --- EXTRA FIELDS FROM TASK 63 ---
     status = Column(String(50), nullable=False)
     priority = Column(Integer, nullable=False)
 
@@ -47,4 +45,3 @@ class Project(Base):
     tags = Column(String, nullable=True)
     urls = Column(String, nullable=True)
     members = Column(String, nullable=True)
-

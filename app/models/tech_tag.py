@@ -9,3 +9,4 @@ class TechTag(Base):
 
     def __repr__(self):
         return f"<TechTag id={self.id} name={self.name}>"
+
