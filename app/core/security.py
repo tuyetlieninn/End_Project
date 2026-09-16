@@ -1,18 +1,3 @@
-<<<<<<< HEAD
-import jwt
-from datetime import datetime, timedelta
-from app.core.config import settings
-
-def create_access_token(data: dict, expires_minutes: int = 60):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
-    to_encode.update({"exp": expire})
-    return jwt.encode(
-        to_encode,
-        settings.jwt_secret,
-        algorithm=settings.jwt_algorithm
-    )
-=======
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -37,13 +22,10 @@ def create_access_token(email: str, role: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    # payload chứa email + role để FE decode được { email, role } như API仕様 yêu cầu
     payload = {"sub": email, "email": email, "role": role, "exp": expire}
     return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
 
 
 def decode_token(token: str) -> dict:
     settings = get_settings()
-    # Nếu token sai/hết hạn, jwt.decode sẽ tự raise lỗi (InvalidTokenError)
     return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
->>>>>>> develop
