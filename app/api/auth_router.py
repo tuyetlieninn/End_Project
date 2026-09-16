@@ -8,7 +8,7 @@ from app.models.user import User
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
 from app.core.security import create_access_token
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

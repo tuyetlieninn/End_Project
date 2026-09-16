@@ -1,10 +1,7 @@
-"""${message}
+<%text>
+"""${message}"""
+</%text>
 
-Revision ID: ${up_revision}
-Revises: ${down_revision | default(None)}
-Create Date: ${create_date}
-
-"""
 from alembic import op
 import sqlalchemy as sa
 ${imports if imports else ""}

@@ -1,6 +1,5 @@
-import re
-
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from datetime import datetime
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 def validate_password_strength(value: str) -> str:
@@ -16,7 +15,9 @@ def validate_password_strength(value: str) -> str:
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8, max_length=100)
+
+    password: str = Field(min_length=8, max_length=128)
+
 
     # field_validator chạy SAU khi Field(min_length=8) đã pass, kiểm tra thêm điều kiện phức tạp
     @field_validator("password")
@@ -27,13 +28,8 @@ class RegisterRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
-
-
-class UserInfo(BaseModel):
-    # Object con "user" nằm trong response, đúng theo spec { idToken, user: { email, role } }
-    email: str
     role: str
+    created_at: datetime
 
 
 class Token(BaseModel):

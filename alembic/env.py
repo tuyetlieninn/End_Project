@@ -5,11 +5,12 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+# add app folder to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.core.config import settings
-from app.db.database import Base
-import app.models  # noqa: F401
+from app.core.database import Base
+import app.models  # import all models so Alembic can detect them
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url.replace("+aiosqlite", ""))
@@ -17,6 +18,7 @@ config.set_main_option("sqlalchemy.url", settings.database_url.replace("+aiosqli
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# IMPORTANT: Alembic needs metadata to autogenerate migrations
 target_metadata = Base.metadata
 
 
@@ -25,6 +27,7 @@ def run_migrations_offline() -> None:
         url=config.get_main_option("sqlalchemy.url"),
         target_metadata=target_metadata,
         literal_binds=True,
+        render_as_batch=True,   # FIX: this was missing
         dialect_opts={"paramstyle": "named"},
     )
     with context.begin_transaction():
@@ -38,7 +41,11 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=True,   # FIX: this was missing
+        )
         with context.begin_transaction():
             context.run_migrations()
 

@@ -9,15 +9,20 @@ from app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/tech-tags", tags=["tech-tags"])
 
-
 @router.get("/", response_model=list[TechTagRead])
 async def list_tags(
+    q: str | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    result = await db.execute(select(TechTag))
-    return result.scalars().all()
+    stmt = select(TechTag)
 
+    # autocomplete
+    if q:
+        stmt = stmt.where(TechTag.name.ilike(f"%{q}%"))
+
+    result = await db.execute(stmt)
+    return result.scalars().all()
 
 @router.post("/", response_model=TechTagRead)
 async def create_tag(
@@ -25,12 +30,18 @@ async def create_tag(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
+    # tránh duplicate
+    existing = await db.execute(
+        select(TechTag).where(TechTag.name == data.name)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(400, "Tech tag already exists")
+
     tag = TechTag(**data.dict())
     db.add(tag)
     await db.commit()
     await db.refresh(tag)
     return tag
-
 
 @router.get("/{tag_id}", response_model=TechTagRead)
 async def get_tag(
@@ -44,7 +55,6 @@ async def get_tag(
         raise HTTPException(404, "Tech tag not found")
     return tag
 
-
 @router.put("/{tag_id}", response_model=TechTagRead)
 async def update_tag(
     tag_id: int,
@@ -57,9 +67,14 @@ async def update_tag(
     if not tag:
         raise HTTPException(404, "Tech tag not found")
 
-    for key, value in data.dict().items():
-        setattr(tag, key, value)
+    # tránh duplicate khi update
+    existing = await db.execute(
+        select(TechTag).where(TechTag.name == data.name, TechTag.id != tag_id)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(400, "Tech tag already exists")
 
+    tag.name = data.name
     await db.commit()
     await db.refresh(tag)
     return tag
@@ -68,14 +83,7 @@ async def update_tag(
 @router.delete("/{tag_id}")
 async def delete_tag(
     tag_id: int,
-    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    result = await db.execute(select(TechTag).where(TechTag.id == tag_id))
-    tag = result.scalar_one_or_none()
-    if not tag:
-        raise HTTPException(404, "Tech tag not found")
-
-    await db.delete(tag)
-    await db.commit()
-    return {"message": "Tech tag deleted"}
+    # tech_tags không được xóa vật lý
+    raise HTTPException(405, "Tech tags cannot be deleted")
