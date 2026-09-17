@@ -5,6 +5,7 @@ from app.models.tech_tag import TechTag
 
 
 def _normalize_tag_name(name: str) -> str:
+    # Chuẩn hóa về chữ thường, tránh "Python" và "python" bị coi là 2 tag khác nhau
     return name.strip().lower()
 
 
@@ -27,9 +28,7 @@ async def upsert_tech_tags(db: AsyncSession, names: list[str]) -> list[TechTag]:
     if not normalized_names:
         return []
 
-    result = await db.execute(
-        select(TechTag).where(TechTag.name.in_(normalized_names))
-    )
+    result = await db.execute(select(TechTag).where(TechTag.name.in_(normalized_names)))
     existing_tags = {tag.name: tag for tag in result.scalars().all()}
 
     for name in normalized_names:

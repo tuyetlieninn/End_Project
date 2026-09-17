@@ -1,16 +1,16 @@
-"""${message}.
+"""${message}
 
 Revision ID: ${up_revision}
-Revises: ${down_revision | comma,n}
+Revises: ${down_revision | default(None)}
 Create Date: ${create_date}
-"""
-from typing import Sequence, Union
 
+"""
 from alembic import op
 import sqlalchemy as sa
+${imports if imports else ""}
 
-${upgrades if upgrades else ""}
+def upgrade():
+    ${upgrades if upgrades else "pass"}
 
-
-def downgrade() -> None:
+def downgrade():
     ${downgrades if downgrades else "pass"}
