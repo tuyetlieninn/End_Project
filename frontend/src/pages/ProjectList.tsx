@@ -63,21 +63,18 @@ export function ProjectList() {
   }
 
   // Debounce the search input by 300ms before triggering a new query.
-  // Skip the page-reset on the first run (mount) so the page restored from
-  // the URL (back from Detail) is not immediately reset to 1.
-  const isFirstQEffectRef = { current: true } as { current: boolean };
+  // Only a real change of the keyword resets the page: on mount q and
+  // debouncedQ both come from the URL, so the page restored from the URL
+  // (back from Detail) is kept. This also stays correct under StrictMode,
+  // which runs effects twice on mount.
   useEffect(() => {
-    if (isFirstQEffectRef.current) {
-      isFirstQEffectRef.current = false;
-      setDebouncedQ(q);
-      return;
-    }
+    if (q === debouncedQ) return;
     const timer = setTimeout(() => {
       setDebouncedQ(q);
       setPage(1);
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [q]);
+  }, [q, debouncedQ]);
 
   // Sync the search/filter state to the URL (replace, not push) so that
   // navigating back from Detail restores the same view.
@@ -110,6 +107,13 @@ export function ProjectList() {
     })
       .then((response) => {
         if (cancelled) return;
+        // A page beyond the last one (e.g. ?page=99 in the URL) is moved to
+        // the last page; changing `page` re-runs this effect with a valid page.
+        const lastPage = Math.max(1, Math.ceil(response.total / PAGE_SIZE));
+        if (page > lastPage) {
+          setPage(lastPage);
+          return;
+        }
         setItems(response.items);
         setTotal(response.total);
         setStatus("loaded");
