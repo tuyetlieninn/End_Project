@@ -25,6 +25,14 @@ Apply the database migrations before starting the server:
 alembic upgrade head
 ```
 
+The API no longer creates tables on startup, so every request fails with a 500 error until the migrations have been applied.
+
+If you already have a local database that was created by an older version of the app (tables created on startup, no `alembic_version` table), `alembic upgrade head` stops with `table tech_tags already exists`. Either delete that database file and run `alembic upgrade head` again (local data is lost), or, if its tables already match the current models, mark it as up to date without re-creating anything:
+
+```bash
+alembic stamp head
+```
+
 Start the API:
 
 ```bash
