@@ -1,13 +1,40 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import ColumnElement, false, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import InstrumentedAttribute
 
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectListOut, ProjectOut, ProjectUpdate
 from app.utils.csv_helper import csv_to_list, list_to_csv
 from app.utils.tag_upsert import upsert_tech_tags
+
+LIKE_ESCAPE = "\\"
+
+
+def _escape_like(value: str) -> str:
+    return (
+        value.replace(LIKE_ESCAPE, LIKE_ESCAPE * 2)
+        .replace("%", LIKE_ESCAPE + "%")
+        .replace("_", LIKE_ESCAPE + "_")
+    )
+
+
+def _csv_contains_any(
+    column: InstrumentedAttribute[str], values: list[str]
+) -> ColumnElement[bool] | None:
+    # So khớp nguyên phần tử: tìm ",java," trong ",java,spring," (không khớp "javascript")
+    wanted = [value.strip().lower() for value in values if value.strip()]
+    if not wanted:
+        return None
+    wrapped = func.lower(literal(",") + column + literal(","))
+    conditions = [
+        wrapped.like(f"%,{_escape_like(value)},%", escape=LIKE_ESCAPE)
+        for value in wanted
+        if "," not in value  # a value containing "," can never be a single CSV item
+    ]
+    return or_(*conditions) if conditions else false()
 
 
 def _to_out(project: Project) -> ProjectOut:
@@ -84,25 +111,25 @@ async def list_projects(
     stmt = select(Project).where(Project.deleted_at.is_(None))  
 
     if q:
-        
-        pattern = f"%{q}%"
+        # Escape LIKE wildcards so "%" and "_" are searched as literal characters
+        pattern = f"%{_escape_like(q)}%"
         stmt = stmt.where(
             or_(
-                Project.customer_name.ilike(pattern),
-                Project.project_name.ilike(pattern),
-                Project.description.ilike(pattern),
+                Project.customer_name.ilike(pattern, escape=LIKE_ESCAPE),
+                Project.project_name.ilike(pattern, escape=LIKE_ESCAPE),
+                Project.description.ilike(pattern, escape=LIKE_ESCAPE),
             )
         )
 
-    # Filter multi-value: OR trong 1 field -> dùng chuỗi LIKE cho từng giá trị, nối bằng or_
-    if technology:
-        stmt = stmt.where(or_(*[Project.technologies_csv.contains(t) for t in technology]))
-    if project_type:
-        stmt = stmt.where(or_(*[Project.project_types_csv.contains(t) for t in project_type]))
-    if dev_process_phase:
-        stmt = stmt.where(
-            or_(*[Project.dev_process_phases_csv.contains(t) for t in dev_process_phase])
-        )
+    # Filter multi-value: OR trong 1 field, mỗi giá trị phải khớp nguyên một phần tử của CSV
+    for column, values in (
+        (Project.technologies_csv, technology),
+        (Project.project_types_csv, project_type),
+        (Project.dev_process_phases_csv, dev_process_phase),
+    ):
+        condition = _csv_contains_any(column, values)
+        if condition is not None:
+            stmt = stmt.where(condition)
 
     # Đếm tổng số kết quả TRƯỚC khi phân trang (để trả về "total" đúng)
     count_stmt = select(func.count()).select_from(stmt.subquery())

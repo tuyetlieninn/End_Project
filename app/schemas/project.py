@@ -1,8 +1,11 @@
+import re
 from enum import Enum
 
 from datetime import date
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}", re.ASCII)
 
 
 class ProjectType(str, Enum):
@@ -45,12 +48,13 @@ class ProjectCreate(BaseModel):
     def validate_date_format(cls, value: str | None) -> str | None:
         if value is None:
             return value
+        # fromisoformat also accepts ISO week dates such as "2026-W01-1", so check the shape first
+        if not DATE_PATTERN.fullmatch(value):
+            raise ValueError("Date must use the YYYY-MM-DD format")
         try:
             date.fromisoformat(value)
         except ValueError as exc:
             raise ValueError("Date must use the YYYY-MM-DD format") from exc
-        if len(value) != 10:
-            raise ValueError("Date must use the YYYY-MM-DD format")
         return value
 
     @field_validator("technologies")
