@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class ProjectType(str, Enum):
-    # Enum chính thức theo API仕様, KHÔNG được thêm giá trị ngoài danh sách này
+    
     OFFSHORE = "offshore"
     SES = "ses"
     LAB = "lab"

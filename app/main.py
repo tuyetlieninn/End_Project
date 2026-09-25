@@ -6,7 +6,7 @@ from app.api.routers import auth, projects, tags
 
 app = FastAPI(title="End_Project API")
 
-# Cho phép frontend (chạy ở port 5173) gọi được API này
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],

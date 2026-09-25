@@ -31,7 +31,7 @@ class LoginRequest(BaseModel):
 
 
 class UserInfo(BaseModel):
-    # Object con "user" nằm trong response, đúng theo spec { idToken, user: { email, role } }
+    
     email: str
     role: str
 

@@ -11,8 +11,7 @@ from app.utils.tag_upsert import upsert_tech_tags
 
 
 def _to_out(project: Project) -> ProjectOut:
-    # Hàm dùng chung: chuyển 1 Project (DB model) thành ProjectOut (response)
-    # Việc convert CSV -> list[str] và datetime -> string xảy ra ở đây, một chỗ duy nhất
+    
     return ProjectOut(
         id=project.id,
         customer_name=project.customer_name,
@@ -47,7 +46,7 @@ async def _get_active_project(db: AsyncSession, project_id: int) -> Project:
 
 
 async def create_project(db: AsyncSession, payload: ProjectCreate, created_by: str) -> ProjectOut:
-    await upsert_tech_tags(db, payload.technologies)  # tự động thêm tag mới vào tech_tags
+    await upsert_tech_tags(db, payload.technologies)  
 
     project = Project(
         customer_name=payload.customer_name,
@@ -65,7 +64,7 @@ async def create_project(db: AsyncSession, payload: ProjectCreate, created_by: s
         technologies_csv=list_to_csv(payload.technologies),
         project_types_csv=list_to_csv([p.value for p in payload.project_types]),
         dev_process_phases_csv=list_to_csv([p.value for p in payload.dev_process_phases]),
-        created_by=created_by,  # LẤY TỪ JWT, không lấy từ payload — đúng yêu cầu bảo mật
+        created_by=created_by,  
     )
     db.add(project)
     await db.commit()
@@ -82,10 +81,10 @@ async def list_projects(
     project_type: list[str],
     dev_process_phase: list[str],
 ) -> ProjectListOut:
-    stmt = select(Project).where(Project.deleted_at.is_(None))  # chỉ lấy record chưa xóa mềm
+    stmt = select(Project).where(Project.deleted_at.is_(None))  
 
     if q:
-        # ILIKE cho full-text search, không phân biệt hoa thường
+        
         pattern = f"%{q}%"
         stmt = stmt.where(
             or_(

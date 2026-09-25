@@ -5,7 +5,7 @@ from app.models.tech_tag import TechTag
 
 
 def _normalize_tag_name(name: str) -> str:
-    # Chuẩn hóa về chữ thường, tránh "Python" và "python" bị coi là 2 tag khác nhau
+    
     return name.strip().lower()
 
 
