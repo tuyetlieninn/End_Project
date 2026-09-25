@@ -2,6 +2,8 @@ import re
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.core.security import MAX_PASSWORD_BYTES
+
 
 def validate_password_strength(value: str) -> str:
     
@@ -11,6 +13,9 @@ def validate_password_strength(value: str) -> str:
         raise ValueError("Password must contain at least 1 lowercase letter")
     if not re.search(r"[0-9]", value):
         raise ValueError("Password must contain at least 1 digit")
+    # bcrypt only accepts up to 72 bytes; longer input makes hashing raise (500)
+    if len(value.encode("utf-8")) > MAX_PASSWORD_BYTES:
+        raise ValueError(f"Password must be at most {MAX_PASSWORD_BYTES} bytes")
     return value
 
 
