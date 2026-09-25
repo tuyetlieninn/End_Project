@@ -92,11 +92,10 @@ export function ProjectForm({
   const [touched, setTouched] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  
-  
   const missingRequired = !customerName.trim() || !projectName.trim() || !startDate;
   const ongoingConflict = isOngoing && endDate !== "";
-  const canSubmit = !missingRequired && !ongoingConflict;
+  const endBeforeStart = Boolean(endDate && startDate && endDate < startDate);
+  const canSubmit = !missingRequired && !ongoingConflict && !endBeforeStart;
 
   
   function handleIsOngoingChange(checked: boolean) {
@@ -117,9 +116,11 @@ export function ProjectForm({
   }
 
   function addTag(tag: string) {
-    const trimmed = tag.trim();
-    if (!trimmed || technologies.includes(trimmed)) return;
-    setTechnologies((prev) => [...prev, trimmed]);
+    const normalized = tag.trim().toLowerCase();
+    if (!normalized || technologies.some((technology) => technology.toLowerCase() === normalized)) {
+      return;
+    }
+    setTechnologies((prev) => [...prev, normalized]);
     setTagInput("");
     setTagSuggestions([]);
   }
@@ -296,7 +297,9 @@ export function ProjectForm({
             </label>
           </div>
 
-          <div className={`input-field${touched && ongoingConflict ? " input-field-error" : ""}`}>
+          <div
+            className={`input-field${touched && (ongoingConflict || endBeforeStart) ? " input-field-error" : ""}`}
+          >
             <label htmlFor="end-date">終了日</label>
             <input
               id="end-date"
@@ -308,6 +311,11 @@ export function ProjectForm({
             {touched && ongoingConflict && (
               <p className="field-error-message" role="alert">
                 進行中の場合、終了日は入力できません
+              </p>
+            )}
+            {touched && endBeforeStart && (
+              <p className="field-error-message" role="alert">
+                終了日は開始日以降にしてください
               </p>
             )}
           </div>

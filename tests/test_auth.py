@@ -32,3 +32,12 @@ async def test_duplicate_tech_tag_returns_409(client, auth_headers):
 
     duplicate = await client.post("/tech-tags", json={"name": "Python"}, headers=auth_headers)
     assert duplicate.status_code == 409
+
+
+async def test_tech_tag_is_normalized_and_blank_is_rejected(client, auth_headers):
+    created = await client.post("/tech-tags", json={"name": " Python "}, headers=auth_headers)
+    assert created.status_code == 201
+    assert created.json()["name"] == "python"
+
+    blank = await client.post("/tech-tags", json={"name": "   "}, headers=auth_headers)
+    assert blank.status_code == 422

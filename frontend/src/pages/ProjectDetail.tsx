@@ -14,6 +14,7 @@ type Status = "loading" | "loaded" | "not-found" | "error";
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const projectId = Number(id);
   const [project, setProject] = useState<Project | null>(null);
   const [status, setStatus] = useState<Status>("loading");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -22,8 +23,14 @@ export function ProjectDetail() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!Number.isInteger(projectId) || projectId < 1) {
+      setStatus("not-found");
+      return () => {
+        cancelled = true;
+      };
+    }
     setStatus("loading");
-    getProject(Number(id))
+    getProject(projectId)
       .then((data) => {
         if (cancelled) return;
         setProject(data);
@@ -36,7 +43,7 @@ export function ProjectDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, projectId]);
 
   async function handleConfirmDelete() {
     if (!project) return;

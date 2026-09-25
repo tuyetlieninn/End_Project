@@ -17,6 +17,50 @@ async def test_create_and_get_project(client, auth_headers):
     assert res2.json()["customer_name"] == "ABC"
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"customer_name": "ABC", "project_name": "Test", "start_date": "abc"},
+        {
+            "customer_name": "ABC",
+            "project_name": "Test",
+            "start_date": "2026-05-01",
+            "end_date": "2026-01-01",
+        },
+        {
+            "customer_name": "ABC",
+            "project_name": "Test",
+            "start_date": "2026-05-01",
+            "end_date": "2026-06-01",
+            "is_ongoing": True,
+        },
+    ],
+)
+async def test_create_rejects_invalid_project_period(client, auth_headers, payload):
+    response = await client.post("/projects", json=payload, headers=auth_headers)
+    assert response.status_code == 422
+
+
+async def test_create_normalizes_and_deduplicates_technologies(client, auth_headers):
+    response = await client.post(
+        "/projects",
+        json={
+            "customer_name": "ABC",
+            "project_name": "Test",
+            "start_date": "2026-01-01",
+            "technologies": [" Python ", "python", "FastAPI"],
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    assert response.json()["technologies"] == ["python", "fastapi"]
+
+
+async def test_get_missing_project_returns_404(client, auth_headers):
+    response = await client.get("/projects/999999", headers=auth_headers)
+    assert response.status_code == 404
+
+
 async def test_soft_delete_hides_project(client, auth_headers):
     res = await client.post(
         "/projects",
