@@ -1,21 +1,10 @@
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers import auth, projects, tags
-from app.db.database import Base, engine
-from app.models import project, tech_tag, user  # noqa: F401
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-
-
-app = FastAPI(title="End_Project API", lifespan=lifespan)
+app = FastAPI(title="End_Project API")
 
 # Cho phép frontend (chạy ở port 5173) gọi được API này
 app.add_middleware(

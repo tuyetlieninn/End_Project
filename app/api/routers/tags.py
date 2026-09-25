@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -30,8 +31,17 @@ async def create_tag(
     db: AsyncSession = Depends(get_db),
     _=Depends(get_current_user),
 ) -> TechTag:
-    tag = TechTag(name=payload.name.strip().lower())
+    normalized_name = payload.name.strip().lower()
+    existing_tag = await db.scalar(select(TechTag).where(TechTag.name == normalized_name))
+    if existing_tag is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tag already exists")
+
+    tag = TechTag(name=normalized_name)
     db.add(tag)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tag already exists")
     await db.refresh(tag)
     return tag
