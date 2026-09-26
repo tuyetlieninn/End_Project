@@ -27,7 +27,7 @@ def random_dates():
 LOGIN_URL = "http://127.0.0.1:8000/auth/login"
 PROJECT_URL = "http://127.0.0.1:8000/projects"
 
-EMAIL = "tuyetlien0406@gmail.com"
+EMAIL = "tuyetlien0406@gmail.com" #thay bằng tk của mọi người nhé ạ
 PASSWORD = "Aa1234567"
 
 TECHS = ["react", "fastapi", "python", "aws", "docker", "typescript", "postgresql"]
