@@ -3,11 +3,10 @@ from sqlalchemy.orm import declarative_base
 
 from app.core.config import settings
 
-# driver "aiosqlite" thay cho driver sync mặc định của SQLite
+# the URL uses the async aiosqlite driver
 SQLALCHEMY_DATABASE_URL = settings.database_url
 
-# create_async_engine thay cho create_engine — cho phép query bất đồng bộ (await)
+# async engine so queries can be awaited
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL)
 
-# Base vẫn giữ nguyên, không đổi
 Base = declarative_base()

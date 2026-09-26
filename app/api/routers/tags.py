@@ -7,6 +7,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.tech_tag import TechTag
 from app.schemas.tech_tag import TechTagCreate, TechTagRead
+from app.utils.sql_like import LIKE_ESCAPE, escape_like
 
 
 router = APIRouter(prefix="/tech-tags", tags=["tech-tags"])
@@ -18,11 +19,11 @@ async def list_tags(
     db: AsyncSession = Depends(get_db),
     _=Depends(get_current_user),
 ) -> list[str]:
-    statement = select(TechTag.name).order_by(TechTag.name)  # chỉ lấy cột name, không lấy cả object
+    statement = select(TechTag.name).order_by(TechTag.name)  # only the name column is needed
     if q:
-        statement = statement.where(TechTag.name.ilike(f"%{q}%"))
+        statement = statement.where(TechTag.name.ilike(f"%{escape_like(q)}%", escape=LIKE_ESCAPE))
     result = await db.execute(statement.limit(20) if q else statement)
-    return list(result.scalars().all())  # trả về list[str] thuần, không có id
+    return list(result.scalars().all())  # plain list[str], without ids
 
 
 @router.post("", response_model=TechTagRead, status_code=status.HTTP_201_CREATED)

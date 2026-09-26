@@ -6,10 +6,10 @@ from datetime import date
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}", re.ASCII)
+MAX_TAG_LENGTH = 100  # tech_tags.name is String(100)
 
 
 class ProjectType(str, Enum):
-    
     OFFSHORE = "offshore"
     SES = "ses"
     LAB = "lab"
@@ -43,6 +43,14 @@ class ProjectCreate(BaseModel):
     project_types: list[ProjectType] = Field(default_factory=list)
     dev_process_phases: list[DevProcessPhase] = Field(default_factory=list)
 
+    @field_validator("customer_name", "project_name")
+    @classmethod
+    def strip_required_text(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Must not be blank")
+        return stripped
+
     @field_validator("start_date", "end_date")
     @classmethod
     def validate_date_format(cls, value: str | None) -> str | None:
@@ -64,6 +72,11 @@ class ProjectCreate(BaseModel):
         seen: set[str] = set()
         for value in values:
             tag = value.strip().lower()
+            # Technologies are stored as CSV, so a comma would silently split one tag into two
+            if "," in tag:
+                raise ValueError("Technology names must not contain a comma")
+            if len(tag) > MAX_TAG_LENGTH:
+                raise ValueError(f"Technology names must be at most {MAX_TAG_LENGTH} characters")
             if tag and tag not in seen:
                 normalized.append(tag)
                 seen.add(tag)
@@ -80,7 +93,7 @@ class ProjectCreate(BaseModel):
         return self
 
 
-# PUT là full replacement nên dùng chung schema với POST (không cho phép thiếu field như PATCH)
+# PUT is a full replacement, so it uses the same schema as POST (no partial update)
 class ProjectUpdate(ProjectCreate):
     pass
 

@@ -97,3 +97,31 @@ async def test_tech_tag_is_normalized_and_blank_is_rejected(client, auth_headers
 
     blank = await client.post("/tech-tags", json={"name": "   "}, headers=auth_headers)
     assert blank.status_code == 422
+
+
+async def test_email_is_case_insensitive_for_register_and_login(client):
+    res = await client.post("/auth/register", json={"email": "Case@Vnext.vn", "password": "Password123"})
+    assert res.status_code == 201
+    assert res.json()["user"]["email"] == "case@vnext.vn"
+
+    duplicate = await client.post("/auth/register", json={"email": "case@vnext.vn", "password": "Password123"})
+    assert duplicate.status_code == 409
+
+    login = await client.post("/auth/login", json={"email": "CASE@VNEXT.VN", "password": "Password123"})
+    assert login.status_code == 200
+
+
+async def test_tech_tag_with_comma_is_rejected(client, auth_headers):
+    res = await client.post("/tech-tags", json={"name": "c,c++"}, headers=auth_headers)
+    assert res.status_code == 422
+
+
+async def test_tech_tag_search_treats_wildcards_literally(client, auth_headers):
+    for name in ("python", "go", "c_sharp"):
+        await client.post("/tech-tags", json={"name": name}, headers=auth_headers)
+
+    res = await client.get("/tech-tags", params={"q": "%"}, headers=auth_headers)
+    assert res.json() == []
+
+    res = await client.get("/tech-tags", params={"q": "_"}, headers=auth_headers)
+    assert res.json() == ["c_sharp"]

@@ -53,7 +53,6 @@ export async function register(email: string, password: string): Promise<LoginRe
   return login(email, password);
 }
 
-
 export async function login(email: string, password: string): Promise<LoginResult> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",

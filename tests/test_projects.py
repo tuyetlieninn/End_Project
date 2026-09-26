@@ -268,3 +268,34 @@ async def test_tech_tags_autocomplete(client, auth_headers):
     res = await client.get("/tech-tags?q=fast", headers=auth_headers)
     assert res.status_code == 200
     assert "fastapi" in res.json()
+
+
+@pytest.mark.parametrize("field", ["customer_name", "project_name"])
+async def test_create_rejects_whitespace_only_names(client, auth_headers, field):
+    payload = {"customer_name": "Customer", "project_name": "Project", "start_date": "2026-01-01"}
+    payload[field] = "   "
+    response = await client.post("/projects", json=payload, headers=auth_headers)
+    assert response.status_code == 422
+
+
+async def test_create_trims_names(client, auth_headers):
+    project = await create_project(client, auth_headers, customer_name="  ABC  ", project_name=" P ")
+    assert (project["customer_name"], project["project_name"]) == ("ABC", "P")
+
+
+@pytest.mark.parametrize("technology", ["c,c++", "t" * 101])
+async def test_create_rejects_invalid_technology_names(client, auth_headers, technology):
+    response = await client.post(
+        "/projects",
+        json={
+            "customer_name": "Customer",
+            "project_name": "Project",
+            "start_date": "2026-01-01",
+            "technologies": [technology],
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+    tags = await client.get("/tech-tags", headers=auth_headers)
+    assert tags.json() == []

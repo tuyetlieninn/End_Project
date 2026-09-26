@@ -8,29 +8,20 @@ from sqlalchemy.orm import InstrumentedAttribute
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectListOut, ProjectOut, ProjectUpdate
 from app.utils.csv_helper import csv_to_list, list_to_csv
+from app.utils.sql_like import LIKE_ESCAPE, escape_like
 from app.utils.tag_upsert import upsert_tech_tags
-
-LIKE_ESCAPE = "\\"
-
-
-def _escape_like(value: str) -> str:
-    return (
-        value.replace(LIKE_ESCAPE, LIKE_ESCAPE * 2)
-        .replace("%", LIKE_ESCAPE + "%")
-        .replace("_", LIKE_ESCAPE + "_")
-    )
 
 
 def _csv_contains_any(
     column: InstrumentedAttribute[str], values: list[str]
 ) -> ColumnElement[bool] | None:
-    # So khớp nguyên phần tử: tìm ",java," trong ",java,spring," (không khớp "javascript")
+    # Match a whole item: look for ",java," in ",java,spring," (does not match "javascript")
     wanted = [value.strip().lower() for value in values if value.strip()]
     if not wanted:
         return None
     wrapped = func.lower(literal(",") + column + literal(","))
     conditions = [
-        wrapped.like(f"%,{_escape_like(value)},%", escape=LIKE_ESCAPE)
+        wrapped.like(f"%,{escape_like(value)},%", escape=LIKE_ESCAPE)
         for value in wanted
         if "," not in value  # a value containing "," can never be a single CSV item
     ]
@@ -38,7 +29,6 @@ def _csv_contains_any(
 
 
 def _to_out(project: Project) -> ProjectOut:
-    
     return ProjectOut(
         id=project.id,
         customer_name=project.customer_name,
@@ -63,7 +53,7 @@ def _to_out(project: Project) -> ProjectOut:
 
 
 async def _get_active_project(db: AsyncSession, project_id: int) -> Project:
-    # Dùng chung cho GET/PUT/DELETE: tìm project CHƯA bị xóa mềm, không có -> 404
+    # Shared by GET/PUT/DELETE: find a project that is not soft-deleted, otherwise 404
     stmt = select(Project).where(Project.id == project_id, Project.deleted_at.is_(None))
     result = await db.execute(stmt)
     project = result.scalars().first()
@@ -73,7 +63,7 @@ async def _get_active_project(db: AsyncSession, project_id: int) -> Project:
 
 
 async def create_project(db: AsyncSession, payload: ProjectCreate, created_by: str) -> ProjectOut:
-    await upsert_tech_tags(db, payload.technologies)  
+    await upsert_tech_tags(db, payload.technologies)
 
     project = Project(
         customer_name=payload.customer_name,
@@ -91,7 +81,7 @@ async def create_project(db: AsyncSession, payload: ProjectCreate, created_by: s
         technologies_csv=list_to_csv(payload.technologies),
         project_types_csv=list_to_csv([p.value for p in payload.project_types]),
         dev_process_phases_csv=list_to_csv([p.value for p in payload.dev_process_phases]),
-        created_by=created_by,  
+        created_by=created_by,
     )
     db.add(project)
     await db.commit()
@@ -108,11 +98,11 @@ async def list_projects(
     project_type: list[str],
     dev_process_phase: list[str],
 ) -> ProjectListOut:
-    stmt = select(Project).where(Project.deleted_at.is_(None))  
+    stmt = select(Project).where(Project.deleted_at.is_(None))
 
     if q:
         # Escape LIKE wildcards so "%" and "_" are searched as literal characters
-        pattern = f"%{_escape_like(q)}%"
+        pattern = f"%{escape_like(q)}%"
         stmt = stmt.where(
             or_(
                 Project.customer_name.ilike(pattern, escape=LIKE_ESCAPE),
@@ -121,7 +111,7 @@ async def list_projects(
             )
         )
 
-    # Filter multi-value: OR trong 1 field, mỗi giá trị phải khớp nguyên một phần tử của CSV
+    # Multi-value filters: OR within one field; each value must match a whole CSV item
     for column, values in (
         (Project.technologies_csv, technology),
         (Project.project_types_csv, project_type),
@@ -131,11 +121,11 @@ async def list_projects(
         if condition is not None:
             stmt = stmt.where(condition)
 
-    # Đếm tổng số kết quả TRƯỚC khi phân trang (để trả về "total" đúng)
+    # Count before paginating so "total" is the full result count
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total = (await db.execute(count_stmt)).scalar_one()
 
-    # Áp dụng phân trang sau cùng
+    # Paginate last
     stmt = stmt.order_by(Project.id).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(stmt)
     projects = result.scalars().all()
@@ -154,7 +144,7 @@ async def update_project(db: AsyncSession, project_id: int, payload: ProjectUpda
     project = await _get_active_project(db, project_id)
     await upsert_tech_tags(db, payload.technologies)
 
-    # Full replacement: gán lại TOÀN BỘ field, trừ created_by (không cho đổi theo yêu cầu)
+    # Full replacement: overwrite every field except created_by, which must not change
     project.customer_name = payload.customer_name
     project.project_name = payload.project_name
     project.description = payload.description
@@ -170,7 +160,6 @@ async def update_project(db: AsyncSession, project_id: int, payload: ProjectUpda
     project.technologies_csv = list_to_csv(payload.technologies)
     project.project_types_csv = list_to_csv([p.value for p in payload.project_types])
     project.dev_process_phases_csv = list_to_csv([p.value for p in payload.dev_process_phases])
-    # created_by KHÔNG bị đổi ở đây — giữ nguyên giá trị cũ
 
     await db.commit()
     await db.refresh(project)
@@ -179,5 +168,5 @@ async def update_project(db: AsyncSession, project_id: int, payload: ProjectUpda
 
 async def delete_project(db: AsyncSession, project_id: int) -> None:
     project = await _get_active_project(db, project_id)
-    project.deleted_at = datetime.now(timezone.utc)  # soft delete — chỉ set cột, không xóa row
+    project.deleted_at = datetime.now(timezone.utc)  # soft delete: only set the column, keep the row
     await db.commit()

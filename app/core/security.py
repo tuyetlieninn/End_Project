@@ -9,7 +9,6 @@ MAX_PASSWORD_BYTES = 72  # bcrypt input limit
 
 
 def hash_password(plain: str) -> str:
-    
     hashed = bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt())
     return hashed.decode("utf-8")
 
