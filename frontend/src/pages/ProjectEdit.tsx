@@ -67,7 +67,7 @@ export function ProjectEdit() {
 
   
   function handleSuccess(updated: Project) {
-    navigate(`/projects/${updated.id}`, {
+    navigate("/projects", {
       state: { successMessage: `「${updated.project_name}」を更新しました` },
     });
   }

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectListOut, ProjectOut, ProjectUpdate
 from app.utils.csv_helper import csv_to_list, list_to_csv
+from app.utils.sql_like import LIKE_ESCAPE, escape_like
 from app.utils.tag_upsert import upsert_tech_tags
 
 
@@ -84,13 +85,13 @@ async def list_projects(
     stmt = select(Project).where(Project.deleted_at.is_(None))  
 
     if q:
-        
-        pattern = f"%{q}%"
+        pattern = f"%{escape_like(q)}%"
         stmt = stmt.where(
             or_(
-                Project.customer_name.ilike(pattern),
-                Project.project_name.ilike(pattern),
-                Project.description.ilike(pattern),
+                Project.customer_name.ilike(pattern, escape=LIKE_ESCAPE),
+                Project.project_name.ilike(pattern, escape=LIKE_ESCAPE),
+                Project.description.ilike(pattern, escape=LIKE_ESCAPE),
+                Project.technologies_csv.ilike(pattern, escape=LIKE_ESCAPE),
             )
         )
 
