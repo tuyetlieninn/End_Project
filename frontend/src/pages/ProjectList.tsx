@@ -203,7 +203,7 @@ export function ProjectList() {
             type="search"
             value={q}
             onChange={(event) => setQ(event.target.value)}
-            placeholder="顧客名・プロジェクト名・概要を検索..."
+            placeholder="顧客名・プロジェクト名・概要・技術を検索..."
             aria-label="検索"
           />
         </div>

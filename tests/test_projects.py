@@ -299,3 +299,14 @@ async def test_create_rejects_invalid_technology_names(client, auth_headers, tec
 
     tags = await client.get("/tech-tags", headers=auth_headers)
     assert tags.json() == []
+
+
+async def test_search_keyword_also_matches_technologies(client, auth_headers):
+    await create_project(client, auth_headers, project_name="With Python", technologies=["Python", "FastAPI"])
+    await create_project(client, auth_headers, project_name="With Go", technologies=["go"])
+
+    response = await client.get("/projects", params={"q": "PYTHON"}, headers=auth_headers)
+    assert [item["project_name"] for item in response.json()["items"]] == ["With Python"]
+
+    response = await client.get("/projects", params={"q": "fast"}, headers=auth_headers)
+    assert [item["project_name"] for item in response.json()["items"]] == ["With Python"]

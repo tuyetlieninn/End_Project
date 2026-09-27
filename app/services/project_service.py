@@ -108,6 +108,7 @@ async def list_projects(
                 Project.customer_name.ilike(pattern, escape=LIKE_ESCAPE),
                 Project.project_name.ilike(pattern, escape=LIKE_ESCAPE),
                 Project.description.ilike(pattern, escape=LIKE_ESCAPE),
+                Project.technologies_csv.ilike(pattern, escape=LIKE_ESCAPE),
             )
         )
 
