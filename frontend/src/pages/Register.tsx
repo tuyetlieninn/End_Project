@@ -3,16 +3,19 @@ import { Link, useNavigate } from "react-router";
 import { register } from "../lib/auth";
 
 const PASSWORD_POLICY_MESSAGE =
-  "パスワードの条件を満たしていません（8文字以上、大文字・小文字・数字を含む）";
+  "パスワードの条件を満たしていません（8文字以上72バイト以内、大文字・小文字・数字を含む）";
+/** bcrypt on the backend accepts at most 72 bytes (UTF-8). */
+const MAX_PASSWORD_BYTES = 72;
 const MISMATCH_MESSAGE = "パスワードが一致しません";
 const EMAIL_TAKEN_MESSAGE = "このメールアドレスは既に登録されています";
 const GENERIC_ERROR_MESSAGE =
   "登録に失敗しました。しばらくしてから再度お試しください";
 
-/** Mirrors the backend password policy: >=8 chars, upper, lower, digit. */
+/** Mirrors the backend password policy: >=8 chars, <=72 bytes, upper, lower, digit. */
 function meetsPasswordPolicy(password: string): boolean {
   return (
     password.length >= 8 &&
+    new TextEncoder().encode(password).length <= MAX_PASSWORD_BYTES &&
     /[A-Z]/.test(password) &&
     /[a-z]/.test(password) &&
     /[0-9]/.test(password)

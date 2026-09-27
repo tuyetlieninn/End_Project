@@ -13,8 +13,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)) -> Token:
-    user = await user_service.register(db, payload)  # giờ nhận về User, không phải token string
-    token = create_access_token(user.email, user.role)  # tạo token ở đây
+    user = await user_service.register(db, payload)  # returns the created User; the token is issued below
+    token = create_access_token(user.email, user.role)
     return Token(idToken=token, user=UserInfo(email=user.email, role=user.role))
 
 

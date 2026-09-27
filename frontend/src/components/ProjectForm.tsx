@@ -48,9 +48,6 @@ const EMPTY_VALUES: ProjectFormValues = {
 
 interface ProjectFormProps {
   initialValues?: Partial<ProjectFormValues>;
-  
-  
-  // chỉ upload sau khi project được tạo thành công — xem handleSubmit).
   onSubmit: (input: ProjectCreateInput) => Promise<Project>;
   onSuccess: (project: Project) => void;
   submitLabel: string;
@@ -95,15 +92,20 @@ export function ProjectForm({
   const missingRequired = !customerName.trim() || !projectName.trim() || !startDate;
   const ongoingConflict = isOngoing && endDate !== "";
   const endBeforeStart = Boolean(endDate && startDate && endDate < startDate);
-  const canSubmit = !missingRequired && !ongoingConflict && !endBeforeStart;
+  // Same rules as the API (team_size >= 1 integer, total_man_month >= 0), shown next to the field
+  // instead of a generic "failed" message after the request is rejected.
+  const teamSizeInvalid =
+    teamSize !== "" && !(Number.isInteger(Number(teamSize)) && Number(teamSize) >= 1);
+  const manMonthInvalid =
+    totalManMonth !== "" && !(Number.isFinite(Number(totalManMonth)) && Number(totalManMonth) >= 0);
+  const canSubmit =
+    !missingRequired && !ongoingConflict && !endBeforeStart && !teamSizeInvalid && !manMonthInvalid;
 
-  
   function handleIsOngoingChange(checked: boolean) {
     setIsOngoing(checked);
     if (checked) setEndDate("");
   }
 
-  
   function handleTagInputChange(value: string) {
     setTagInput(value);
     if (!value.trim()) {
@@ -116,11 +118,17 @@ export function ProjectForm({
   }
 
   function addTag(tag: string) {
-    const normalized = tag.trim().toLowerCase();
-    if (!normalized || technologies.some((technology) => technology.toLowerCase() === normalized)) {
+    // Technologies are stored comma-separated, so "C,C++" is added as two visible tags
+    // instead of being split silently by the API.
+    const newTags = tag
+      .split(/[,、]/)
+      .map((part) => part.trim().toLowerCase())
+      .filter((part, index, parts) => part && parts.indexOf(part) === index)
+      .filter((part) => !technologies.some((technology) => technology.toLowerCase() === part));
+    if (newTags.length === 0) {
       return;
     }
-    setTechnologies((prev) => [...prev, normalized]);
+    setTechnologies((prev) => [...prev, ...newTags]);
     setTagInput("");
     setTagSuggestions([]);
   }
@@ -167,11 +175,6 @@ export function ProjectForm({
         team_composition_note: teamCompositionNote || null,
       });
 
-      
-      // có project_id lúc chọn/paste ảnh ở màn Create). Project đã tạo
-      
-      
-
       onSuccess(project);
     } catch (err) {
       void err;
@@ -190,16 +193,11 @@ export function ProjectForm({
       <form
         onSubmit={handleSubmit}
         onKeyDown={(event) => {
-          
-          
-          
-          
           if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
             event.preventDefault();
           }
         }}
       >
-        {}
         <section className="form-group-card">
           <h2 className="form-group-card-title">基本情報</h2>
 
@@ -262,7 +260,6 @@ export function ProjectForm({
           </div>
         </section>
 
-        {}
         <section className="form-group-card">
           <h2 className="form-group-card-title">期間・規模</h2>
 
@@ -320,35 +317,47 @@ export function ProjectForm({
             )}
           </div>
 
-          {
-}
           <div className="form-row">
-            <div className="input-field">
+            <div className={`input-field${touched && teamSizeInvalid ? " input-field-error" : ""}`}>
               <label htmlFor="team-size">人数</label>
               <div className="input-field-with-unit">
                 <input
                   id="team-size"
                   type="number"
+                  min={1}
+                  step={1}
                   value={teamSize}
                   onChange={(event) => setTeamSize(event.target.value)}
                   disabled={submitting}
                 />
                 <span className="input-unit">名</span>
               </div>
+              {touched && teamSizeInvalid && (
+                <p className="field-error-message" role="alert">
+                  人数は1以上の整数で入力してください
+                </p>
+              )}
             </div>
 
-            <div className="input-field">
+            <div className={`input-field${touched && manMonthInvalid ? " input-field-error" : ""}`}>
               <label htmlFor="total-man-month">総人月</label>
               <div className="input-field-with-unit">
                 <input
                   id="total-man-month"
                   type="number"
+                  min={0}
+                  step="any"
                   value={totalManMonth}
                   onChange={(event) => setTotalManMonth(event.target.value)}
                   disabled={submitting}
                 />
                 <span className="input-unit">人月</span>
               </div>
+              {touched && manMonthInvalid && (
+                <p className="field-error-message" role="alert">
+                  総人月は0以上の数値で入力してください
+                </p>
+              )}
             </div>
           </div>
 
@@ -363,18 +372,16 @@ export function ProjectForm({
           </div>
         </section>
 
-        {}
         <section className="form-group-card">
           <h2 className="form-group-card-title">分類</h2>
 
           <div className="input-field">
             <label htmlFor="tech-input">技術</label>
-            {
-}
             <div className="tech-input-wrapper">
               <input
                 id="tech-input"
                 placeholder="入力してEnterで追加（複数可）"
+                maxLength={100}
                 aria-describedby="tech-input-hint"
                 value={tagInput}
                 onChange={(event) => handleTagInputChange(event.target.value)}
@@ -399,7 +406,7 @@ export function ProjectForm({
               )}
             </div>
             <p id="tech-input-hint" className="input-hint">
-              技術名を入力してEnterキーで追加できます。複数追加可能です。
+              技術名を入力してEnterキーで追加できます。カンマ区切りで複数まとめて追加することもできます。
             </p>
             <ul className="tag-chip-list">
               {technologies.map((tag) => (
@@ -442,9 +449,7 @@ export function ProjectForm({
           </fieldset>
         </section>
 
-        {
-}
-                <div className="input-field">
+        <div className="input-field">
           <label htmlFor="outcome-note">成果・課題・解決策</label>
           <textarea
             id="outcome-note"
@@ -464,7 +469,6 @@ export function ProjectForm({
           />
         </div>
 
-        {}
         <div className="form-actions">
           <button type="submit" className="button-primary" disabled={submitting}>
             {submitLabel}

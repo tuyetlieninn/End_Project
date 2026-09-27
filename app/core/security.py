@@ -5,16 +5,21 @@ import jwt
 
 from app.core.config import get_settings
 
+MAX_PASSWORD_BYTES = 72  # bcrypt input limit
+
 
 def hash_password(plain: str) -> str:
-    
     hashed = bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt())
     return hashed.decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    
-    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    password = plain.encode("utf-8")
+    # Registration rejects passwords over the bcrypt limit, so a longer one can
+    # never match; bcrypt would raise instead of returning False.
+    if len(password) > MAX_PASSWORD_BYTES:
+        return False
+    return bcrypt.checkpw(password, hashed.encode("utf-8"))
 
 
 def create_access_token(email: str, role: str) -> str:

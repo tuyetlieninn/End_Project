@@ -10,6 +10,8 @@ class TechTagCreate(BaseModel):
         normalized = value.strip().lower()
         if not normalized:
             raise ValueError("Tag name must not be blank")
+        if "," in normalized:
+            raise ValueError("Tag name must not contain a comma")
         return normalized
 
 

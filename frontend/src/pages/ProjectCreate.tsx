@@ -7,14 +7,10 @@ const SERVER_ERROR_MESSAGE = "プロジェクトの作成に失敗しました";
 export function ProjectCreate() {
   const navigate = useNavigate();
 
-  
-  // cần project.id trả về để upload ảnh staged trước khi gọi onSuccess.
   async function handleSubmit(input: ProjectCreateInput): Promise<Project> {
     return createProject(input);
   }
 
-  
-  // staged (nếu có) đã upload xong.
   function handleSuccess(project: Project) {
     navigate("/projects", {
       state: { successMessage: `「${project.project_name}」を作成しました` },

@@ -42,8 +42,16 @@ export function ProjectEdit() {
 
   useEffect(() => {
     let cancelled = false;
+    // Same check as the Detail page: "/projects/abc/edit" is a missing project, not a server error
+    const projectId = Number(id);
+    if (!Number.isInteger(projectId) || projectId < 1) {
+      setStatus("not-found");
+      return () => {
+        cancelled = true;
+      };
+    }
     setStatus("loading");
-    getProject(Number(id))
+    getProject(projectId)
       .then((data) => {
         if (cancelled) return;
         setProject(data);
@@ -58,14 +66,10 @@ export function ProjectEdit() {
     };
   }, [id]);
 
-  
-  
-  
   async function handleSubmit(input: ProjectCreateInput): Promise<Project> {
     return updateProject(Number(id), input);
   }
 
-  
   function handleSuccess(updated: Project) {
     navigate(`/projects/${updated.id}`, {
       state: { successMessage: `「${updated.project_name}」を更新しました` },

@@ -168,6 +168,92 @@ async def test_projects_pagination_rejects_invalid_query_parameters(
     assert any(error["loc"][-1] == invalid_field for error in response.json()["detail"])
 
 
+async def create_project(client, auth_headers, **fields):
+    payload = {"customer_name": "Customer", "project_name": "Project", "start_date": "2026-01-01"}
+    payload.update(fields)
+    response = await client.post("/projects", json=payload, headers=auth_headers)
+    assert response.status_code == 201
+    return response.json()
+
+
+@pytest.mark.parametrize("start_date", ["2026-W01-1", "20260101", "2026-02-30", "２０２６-０１-０１"])
+async def test_create_rejects_non_calendar_date_formats(client, auth_headers, start_date):
+    response = await client.post(
+        "/projects",
+        json={"customer_name": "ABC", "project_name": "Test", "start_date": start_date},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+async def test_update_rejects_end_date_before_start_date(client, auth_headers):
+    project = await create_project(client, auth_headers)
+    response = await client.put(
+        f"/projects/{project['id']}",
+        json={
+            "customer_name": "Customer",
+            "project_name": "Project",
+            "start_date": "2026-05-01",
+            "end_date": "2026-01-01",
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("keyword", "expected"),
+    [("%", ["Retail 50%"]), ("_", ["Discount_Campaign"]), ("\\", ["Path C:\\temp"])],
+)
+async def test_search_treats_like_wildcards_as_literal_characters(
+    client, auth_headers, keyword, expected
+):
+    for name in ("Retail 50%", "Discount_Campaign", "Path C:\\temp", "Plain Name"):
+        await create_project(client, auth_headers, customer_name=name)
+
+    response = await client.get("/projects", params={"q": keyword}, headers=auth_headers)
+
+    assert [item["customer_name"] for item in response.json()["items"]] == expected
+
+
+async def test_technology_filter_matches_whole_tag_only(client, auth_headers):
+    await create_project(client, auth_headers, project_name="Java", technologies=["java", "spring"])
+    await create_project(client, auth_headers, project_name="JS", technologies=["javascript"])
+
+    response = await client.get("/projects?technology=java", headers=auth_headers)
+    assert [item["project_name"] for item in response.json()["items"]] == ["Java"]
+
+    response = await client.get("/projects?technology=JAVA&technology=react", headers=auth_headers)
+    assert [item["project_name"] for item in response.json()["items"]] == ["Java"]
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [
+        ("project_type=a", []),
+        ("project_type=lab", ["Lab"]),
+        ("dev_process_phase=maintenance", []),
+        ("dev_process_phase=maintenance_ops", ["Ops"]),
+        ("technology=java,spring", []),
+    ],
+)
+async def test_type_and_phase_filters_match_whole_code_only(client, auth_headers, query, expected):
+    await create_project(
+        client,
+        auth_headers,
+        project_name="Lab",
+        project_types=["lab"],
+        technologies=["java", "spring"],
+    )
+    await create_project(
+        client, auth_headers, project_name="Ops", dev_process_phases=["maintenance_ops"]
+    )
+
+    response = await client.get(f"/projects?{query}", headers=auth_headers)
+
+    assert [item["project_name"] for item in response.json()["items"]] == expected
+
+
 async def test_tech_tags_autocomplete(client, auth_headers):
     await client.post(
         "/projects",
@@ -182,3 +268,45 @@ async def test_tech_tags_autocomplete(client, auth_headers):
     res = await client.get("/tech-tags?q=fast", headers=auth_headers)
     assert res.status_code == 200
     assert "fastapi" in res.json()
+
+
+@pytest.mark.parametrize("field", ["customer_name", "project_name"])
+async def test_create_rejects_whitespace_only_names(client, auth_headers, field):
+    payload = {"customer_name": "Customer", "project_name": "Project", "start_date": "2026-01-01"}
+    payload[field] = "   "
+    response = await client.post("/projects", json=payload, headers=auth_headers)
+    assert response.status_code == 422
+
+
+async def test_create_trims_names(client, auth_headers):
+    project = await create_project(client, auth_headers, customer_name="  ABC  ", project_name=" P ")
+    assert (project["customer_name"], project["project_name"]) == ("ABC", "P")
+
+
+@pytest.mark.parametrize("technology", ["c,c++", "t" * 101])
+async def test_create_rejects_invalid_technology_names(client, auth_headers, technology):
+    response = await client.post(
+        "/projects",
+        json={
+            "customer_name": "Customer",
+            "project_name": "Project",
+            "start_date": "2026-01-01",
+            "technologies": [technology],
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+    tags = await client.get("/tech-tags", headers=auth_headers)
+    assert tags.json() == []
+
+
+async def test_search_keyword_also_matches_technologies(client, auth_headers):
+    await create_project(client, auth_headers, project_name="With Python", technologies=["Python", "FastAPI"])
+    await create_project(client, auth_headers, project_name="With Go", technologies=["go"])
+
+    response = await client.get("/projects", params={"q": "PYTHON"}, headers=auth_headers)
+    assert [item["project_name"] for item in response.json()["items"]] == ["With Python"]
+
+    response = await client.get("/projects", params={"q": "fast"}, headers=auth_headers)
+    assert [item["project_name"] for item in response.json()["items"]] == ["With Python"]
